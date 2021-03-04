@@ -40,6 +40,7 @@ set(Halide_ENABLE_RTTI @Halide_ENABLE_RTTI@)
 # Load dependencies from installed configurations
 include(CMakeFindDependencyMacro)
 find_dependency(Threads)
+find_dependency(MPI)
 
 get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 file(GLOB CONFIG_FILES "${_DIR}/Halide-Deps-*.cmake")
