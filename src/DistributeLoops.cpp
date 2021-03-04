@@ -61,7 +61,7 @@ public:
     DistributeLoops(const map<string, DistributedLoop> &distributed_loops) : distributed_loops(distributed_loops) {}
 
     using IRMutator::visit;
-    Stmt visit(const For *op) {
+    Stmt visit(const For *op) override {
         if (op->distributed) {
             internal_assert(op->min.as<Variable>() != nullptr && op->min.as<Variable>()->name == op->name + ".loop_min");
             internal_assert(op->extent.as<Variable>() != nullptr && op->extent.as<Variable>()->name == op->name + ".loop_extent");
@@ -91,7 +91,7 @@ public:
         }
     }
 
-    Stmt visit(const LetStmt *op) {
+    Stmt visit(const LetStmt *op) override {
         if (ends_with(op->name, ".loop_max") || ends_with(op->name, ".loop_min") || ends_with(op->name, ".loop_extent")) {
             string loop_name = op->name.substr(0, op->name.rfind('.'));
             if (distributed_loops.find(loop_name) != distributed_loops.end()) {

@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
         f(x) = 2 * x + 1;
         f.distribute(x);
 
-        Buffer<int> out = f.realize(20);
+        Buffer<int> out = f.realize({20});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 2 * x + 1;
             if (out(x) != correct) {
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
         Func f;
         f(x) = 2 * x + 1;
         f.distribute(x);
-        Buffer<int> out = f.realize(25);
+        Buffer<int> out = f.realize({25});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 2 * x + 1;
             if (out(x) != correct) {
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
         for (int x = in_buf.dim(0).min(); x <= in_buf.dim(0).max(); x++) {
             in_buf(x) = 2 * x;
         }
-        Buffer<int> out = f.realize(num_elements);
+        Buffer<int> out = f.realize({num_elements});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 4 * x + 1;
             if (out(x) != correct) {
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
             in_buf(x) = 2 * x;
         }
 
-        Buffer<int> out = g.realize(num_elements);
+        Buffer<int> out = g.realize({num_elements});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 4 * x + 2;
             if (out(x) != correct) {
@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
             in_buf(x) = 2 * x;
         }
 
-        Buffer<int> out = g.realize(num_elements);
+        Buffer<int> out = g.realize({num_elements});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 4 * x + 2;
             if (out(x) != correct) {
@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
             in_buf(x) = 2 * x;
         }
 
-        Buffer<int> out = f.realize(num_elements);
+        Buffer<int> out = f.realize({num_elements});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int left_id = std::max(x - 1, 0);
             int right_id = std::min(x + 1, num_elements - 1);
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
             in_buf(x) = 2 * x;
         }
 
-        Buffer<int> out = f.realize(num_elements);
+        Buffer<int> out = f.realize({num_elements});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int left_id = std::max(x - 1, 0);
             int right_id = std::min(x + 1, num_elements - 1);
@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
             in_buf(x) = 2 * x;
         }
 
-        Buffer<int> out = f.realize(num_elements);
+        Buffer<int> out = f.realize({num_elements});
         if (out.dim(0).min() != buf_min) {
             printf("rank %d: out.dim(0).min() = %d instead of %d\n", rank, out.dim(0).min(), buf_min);
             MPI_Finalize();
@@ -326,7 +326,7 @@ int main(int argc, char **argv) {
             in_buf(x) = 2 * x;
         }
 
-        Buffer<int> out = f.realize(num_elements);
+        Buffer<int> out = f.realize({num_elements});
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 4 * x + 1;
             if (out(x) != correct) {

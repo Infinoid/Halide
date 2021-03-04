@@ -46,6 +46,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(TARGET_MPI "Build Halide with MPI?" ON)
 if (TARGET_MPI)
     message(STATUS "Build with MPI support")
+    # Sets MPI_CXX_COMPILE_DEFINITIONS with values we sometimes need, depending
+    # on the MPI implementation and how it was built.
+    set(MPI_CXX_SKIP_MPICXX TRUE CACHE BOOL "Skip MPI C++ bindings")
     find_package(MPI REQUIRED)
 endif()
 

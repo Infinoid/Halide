@@ -253,20 +253,19 @@ foreach (i IN LISTS RUNTIME_CPP)
                 target_compile_options(${basename} PRIVATE ${RUNTIME_CXX_FLAGS} ${fpic} ${fshort-wchar} -m${j} -target ${TARGET})
                 target_compile_definitions(${basename} PRIVATE ${RUNTIME_DEFINES})
             else()
-                set(mpi_compile_flag "")
-                set(mpi_include_flag "")
+                set(extra_compile_flags "")
+                set(extra_include_flags "")
                 if (i MATCHES "^mpi$")
-                    if (NOT "${MPI_CXX_COMPILE_FLAGS}" STREQUAL "")
-                        set(mpi_compile_flag ${MPI_CXX_COMPILE_FLAGS})
-                    endif ()
-                    if (NOT "${MPI_CXX_INCLUDE_DIRS}" STREQUAL "")
-                        foreach(DIR ${MPI_CXX_INCLUDE_DIRS})
-                            set(mpi_include_flag ${mpi_include_flag} -I${DIR})
-                        endforeach()
-                    endif ()
+                    list(APPEND extra_compile_flags ${MPI_CXX_COMPILE_OPTIONS})
+                    foreach (DEF ${MPI_CXX_COMPILE_DEFINITIONS})
+                        list(APPEND extra_compile_flags "-D${DEF}")
+                    endforeach ()
+                    foreach (DIR ${MPI_CXX_INCLUDE_DIRS})
+                        list(APPEND extra_include_flags "-I${DIR}")
+                    endforeach ()
                 endif ()
                 add_custom_command(OUTPUT "${LL}"
-                                   COMMAND clang ${clang_flags} -o "${ll_path}" "$<SHELL_PATH:${SOURCE}>" ${mpi_compile_flag} ${mpi_include_flag}
+                                   COMMAND clang ${clang_flags} -o "${ll_path}" "$<SHELL_PATH:${SOURCE}>" ${extra_compile_flags} ${extra_include_flags}
                                    DEPENDS "${SOURCE}"
                                    # Note: IMPLICIT_DEPENDS only works for Makefile generators, ${dep_args} handles Ninja.
                                    IMPLICIT_DEPENDS CXX "${SOURCE}"
