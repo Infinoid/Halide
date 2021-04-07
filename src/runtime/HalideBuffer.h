@@ -503,7 +503,8 @@ public:
         }
 
         Dimension(const halide_dimension_t &dim)
-            : d(dim){};
+            : d(dim) {
+        }
     };
 
     /** Access the shape of the buffer */
