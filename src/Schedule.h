@@ -573,6 +573,11 @@ public:
     std::vector<Bound> &estimates();
     // @}
 
+    /** For distributed computing. Setup the rank to send the local data of this
+     * node to. If the number if smaller than 0 */
+    int send_to() const;
+    int &send_to();
+
     /** Mark calls of a function by 'f' to be replaced with its identity
      * wrapper or clone during the lowering stage. If the string 'f' is empty,
      * it means replace all calls to the function by all other functions

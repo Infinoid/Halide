@@ -222,6 +222,7 @@ struct FuncScheduleContents {
     bool memoized = false;
     bool async = false;
     Expr memoize_eviction_key;
+    int send_to = -1;
 
     FuncScheduleContents()
         : store_level(LoopLevel::inlined()), compute_level(LoopLevel::inlined()){};
@@ -340,6 +341,7 @@ FuncSchedule FuncSchedule::deep_copy(
     copy.contents->memoized = contents->memoized;
     copy.contents->memoize_eviction_key = contents->memoize_eviction_key;
     copy.contents->async = contents->async;
+    copy.contents->send_to = contents->send_to;
 
     // Deep-copy wrapper functions.
     for (const auto &iter : contents->wrappers) {
@@ -442,6 +444,14 @@ const LoopLevel &FuncSchedule::store_level() const {
 
 const LoopLevel &FuncSchedule::compute_level() const {
     return contents->compute_level;
+}
+
+int &FuncSchedule::send_to() {
+    return contents->send_to;
+}
+
+int FuncSchedule::send_to() const {
+    return contents->send_to;
 }
 
 void FuncSchedule::accept(IRVisitor *visitor) const {

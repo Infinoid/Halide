@@ -35,6 +35,7 @@
 #include "IROperator.h"
 #include "IRPrinter.h"
 #include "InferArguments.h"
+#include "InjectCommunications.h"
 #include "InjectHostDevBufferCopies.h"
 #include "Inline.h"
 #include "LICM.h"
@@ -224,6 +225,12 @@ Module lower(const vector<Function> &output_funcs,
     s = add_image_checks(s, outputs, t, order, env, func_bounds, will_inject_host_copies);
     debug(2) << "Lowering after injecting image checks:\n"
              << s << '\n';
+
+    if (t.has_feature(Target::MPI)) {
+        debug(1) << "Injecting MPI communications...\n";
+        s = inject_communications(s);
+        debug(2) << "Lowering after injecting communications:\n" << s << "\n\n";
+    }
 
     debug(1) << "Removing code that depends on undef values...\n";
     s = remove_undef(s);

@@ -144,6 +144,21 @@ public:
     }
 };
 
+class FindSendToFuncs : public IRGraphVisitor {
+    using IRGraphVisitor::visit;
+
+    void visit(const Call *op) override {
+        if (op->is_intrinsic(Call::send_to_marker)) {
+            internal_assert(op->args.size() == 3);
+            const StringImm *func_name = op->args[0].as<StringImm>();
+            Expr destination_rank = op->args[1];
+            funcs_map[func_name->value] = destination_rank;
+        }
+    }
+public:
+    map<string, Expr /*destination rank*/> funcs_map;
+};
+
 Stmt add_image_checks_inner(Stmt s,
                             const vector<Function> &outputs,
                             const Target &t,
@@ -178,9 +193,30 @@ Stmt add_image_checks_inner(Stmt s,
     // used on host.
     s.accept(&finder);
 
+    // For distributed computing: find funcs where we send data to a specific node.
+    // This requires a special treatment in bounds inference
+    FindSendToFuncs find_send_to_funcs;
+    s.accept(&find_send_to_funcs);
+
     Scope<Interval> empty_scope;
     Stmt sub_stmt = TrimStmtToPartsThatAccessBuffers(bufs).mutate(s);
     map<string, Box> boxes = boxes_touched(sub_stmt, empty_scope, fb);
+    for (auto &it : boxes) {
+        auto funcs_map_it = find_send_to_funcs.funcs_map.find(it.first);
+        if (funcs_map_it != find_send_to_funcs.funcs_map.end()) {
+            // Rewrite the bounds
+            Box &b = it.second;
+            for (size_t i = 0; i < b.size(); i++) {
+                Expr rank = Call::make(Int(32), Call::mpi_rank, {}, Call::PureIntrinsic);
+                Expr num_proc = Call::make(Int(32), Call::mpi_num_processors, {}, Call::PureIntrinsic);
+                Expr is_destination_rank = rank == funcs_map_it->second;
+                b[i].min = Select::make(is_destination_rank,
+                    simplify(substitute(rank, Expr(0), b[i].min)), b[i].min);
+                b[i].max = Select::make(is_destination_rank,
+                    simplify(substitute(rank, num_proc - 1, b[i].max)), b[i].max);
+            }
+        }
+    }
 
     // Now iterate through all the buffers, creating a list of lets
     // and a list of asserts.

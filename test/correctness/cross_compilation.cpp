@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
         "arm-64-windows-d3d12compute",
         "x86-32-linux",
         "x86-32-osx",
-        "x86-32-windows",
+        // "x86-32-windows",
         "x86-64-linux",
         "x86-64-osx",
         "x86-64-windows",

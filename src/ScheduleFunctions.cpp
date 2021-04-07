@@ -414,6 +414,13 @@ Stmt build_provide_loop_nest(const map<string, Function> &env,
         }
     }
 
+    if (func.schedule().send_to() >= 0) {
+        // Generate code that sends/receives data from/to local node to master node
+        stmt = Block::make(stmt, Evaluate::make(Call::make(
+            func.values()[0].type(), Call::send_to_marker,
+            {Expr(func.name()), func.schedule().send_to(), Expr(func.dimensions())}, Call::Intrinsic)));
+    }
+
     return stmt;
 }
 

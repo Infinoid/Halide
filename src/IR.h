@@ -528,6 +528,8 @@ struct Call : public ExprNode<Call> {
         mod_round_to_zero,
         mpi_num_processors,
         mpi_rank,
+        mpi_send,
+        mpi_recv,
         mulhi_shr,  // Compute high_half(arg[0] * arg[1]) >> arg[3]. Note that this is a shift in addition to taking the upper half of multiply result. arg[3] must be an unsigned integer immediate.
         mux,
         popcount,
@@ -548,6 +550,7 @@ struct Call : public ExprNode<Call> {
         saturating_sub,
         scatter_gather,
         select_mask,
+        send_to_marker, // For distributed schedules
         shift_left,
         shift_right,
         signed_integer_overflow,

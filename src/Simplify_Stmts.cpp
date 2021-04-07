@@ -207,7 +207,7 @@ Stmt Simplify::visit(const For *op) {
         Stmt s = LetStmt::make(op->name, new_min, new_body);
         return mutate(s);
     } else if (!stmt_uses_var(new_body, op->name) && !is_const_zero(op->min)) {
-        return For::make(op->name, make_zero(Int(32)), new_extent, op->for_type, op->device_api, new_body);
+        return For::make(op->name, make_zero(Int(32)), new_extent, op->for_type, op->distributed, op->device_api, new_body);
     } else if (op->min.same_as(new_min) &&
                op->extent.same_as(new_extent) &&
                op->body.same_as(new_body)) {

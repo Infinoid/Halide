@@ -2168,6 +2168,12 @@ Func &Func::distribute(const VarOrRVar &var) {
     return *this;
 }
 
+Func &Func::send_to(int rank) {
+    invalidate_cache();
+    func.schedule().send_to() = rank;
+    return *this;
+}
+
 Func &Func::parallel(const VarOrRVar &var) {
     invalidate_cache();
     Stage(func, func.definition(), 0).parallel(var);

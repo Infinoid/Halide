@@ -8,7 +8,7 @@
 
 using namespace Halide::Runtime;
 
-const int num_elements = 25;
+const int num_elements = 16383;
 
 int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
@@ -17,7 +17,8 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 
-    Buffer<int> input(nullptr, 0), output(nullptr, 0);
+    Buffer<int> input(num_elements);
+    Buffer<int> output(nullptr, 0);
     input.set_distributed(std::vector<int>{num_elements});
     output.set_distributed(std::vector<int>{num_elements});
     distributed(input, output);

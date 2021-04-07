@@ -1488,6 +1488,10 @@ public:
      * distributed fashion. */
     Func &distribute(const VarOrRVar &var);
 
+    /** For distributed computing. Send all local data to a node. 
+     *  Set to a negative number to disable data sending. */
+    Func &send_to(int rank);
+
     /** Mark a dimension to be traversed in parallel */
     Func &parallel(const VarOrRVar &var);
 

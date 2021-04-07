@@ -12,7 +12,9 @@ public:
     }
 
     void schedule() {
-        output.distribute(x);
+    	Var xo("xo"), xi("xi");
+        output.split(x, xo, xi, 64)
+              .distribute(xo);
     }
 
 private:

@@ -2721,6 +2721,10 @@ void CodeGen_LLVM::visit(const Call *op) {
     } else if (op->is_intrinsic(Call::mpi_rank)) {
         internal_assert(op->args.size() == 0);
         codegen(Call::make(op->type, "halide_mpi_rank", {}, Call::PureExtern));
+    } else if (op->is_intrinsic(Call::mpi_send)) {
+        codegen(Call::make(op->type, "halide_mpi_send", op->args, Call::Extern));
+    } else if (op->is_intrinsic(Call::mpi_recv)) {
+        codegen(Call::make(op->type, "halide_mpi_recv", op->args, Call::Extern));
     } else if (op->is_intrinsic(Call::mulhi_shr)) {
         internal_assert(op->args.size() == 3);
 
