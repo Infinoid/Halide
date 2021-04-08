@@ -2252,7 +2252,7 @@ int main(int argc, char **argv) {
 
     {
         Stmt body = AssertStmt::make(x > 0, y);
-        check(For::make("t", 0, x, ForType::Serial, DeviceAPI::None, body),
+        check(For::make("t", 0, x, ForType::Serial, false /* distributed */, DeviceAPI::None, body),
               Evaluate::make(0));
     }
 
