@@ -197,7 +197,7 @@ class RollFunc : public IRMutator {
         if (loops_to_rebase.count(op->name)) {
             string new_name = op->name + ".rebased";
             Stmt body = substitute(op->name, Variable::make(Int(32), new_name) + op->min, op->body);
-            result = For::make(new_name, 0, op->extent, op->for_type, op->device_api, body);
+            result = For::make(new_name, 0, op->extent, op->for_type, op->distributed, op->device_api, body);
             loops_to_rebase.erase(op->name);
         }
         return result;
@@ -849,7 +849,7 @@ class SlidingWindow : public IRMutator {
         if (body.same_as(op->body) && loop_min.same_as(op->min) && loop_extent.same_as(op->extent) && name == op->name) {
             return op;
         } else {
-            Stmt result = For::make(name, loop_min, loop_extent, op->for_type, op->device_api, body);
+            Stmt result = For::make(name, loop_min, loop_extent, op->for_type, op->distributed, op->device_api, body);
             if (!new_lets.empty()) {
                 result = LetStmt::make(name + ".loop_max", loop_max, result);
             }
@@ -895,7 +895,7 @@ class AddLoopMinOrig : public IRMutator {
         if (body.same_as(op->body) && min.same_as(op->min) && extent.same_as(op->extent)) {
             result = op;
         } else {
-            result = For::make(op->name, min, extent, op->for_type, op->device_api, body);
+            result = For::make(op->name, min, extent, op->for_type, op->distributed, op->device_api, body);
         }
         return LetStmt::make(op->name + ".loop_min.orig", Variable::make(Int(32), op->name + ".loop_min"), result);
     }

@@ -455,7 +455,6 @@ SOURCE_FILES = \
   DeviceArgument.cpp \
   DeviceInterface.cpp \
   Dimension.cpp \
-  DistributedBuffer.cpp \
   DistributeLoops.cpp \
   EarlyFree.cpp \
   Elf.cpp \
@@ -628,7 +627,6 @@ HEADER_FILES = \
   DeviceArgument.h \
   DeviceInterface.h \
   Dimension.h \
-  DistributedBuffer.h \
   DistributeLoops.h \
   EarlyFree.h \
   Elf.h \
