@@ -341,8 +341,29 @@ int main(int argc, char **argv) {
         f(x) = 2 * x + 1;
         f.distribute(x)
          .send_to(0);
-
         Buffer<int> out = f.realize({20});
+        if (rank == 0) {
+            if (out.dim(0).min() != 0) {
+                printf("rank %d: out.dim(0).min() = %d instead of %d\n", rank, out.dim(0).min(), 0);
+                return 0;
+            }
+            if (out.dim(0).max() != 19) {
+                printf("rank %d: out.dim(0).max() = %d instead of %d\n", rank, out.dim(0).max(), 19);
+                return 0;
+            }
+        } else {
+            int num_elements_per_proc = (20 + numprocs - 1) / numprocs;
+            int buf_min = num_elements_per_proc * rank;
+            int buf_max = std::min(buf_min + num_elements_per_proc - 1, 20 - 1);
+            if (out.dim(0).min() != buf_min) {
+                printf("rank %d: out.dim(0).min() = %d instead of %d\n", rank, out.dim(0).min(), buf_min);
+                return 0;
+            }
+            if (out.dim(0).max() != buf_max) {
+                printf("rank %d: out.dim(0).max() = %d instead of %d\n", rank, out.dim(0).max(), buf_max);
+                return 0;
+            }
+        }
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 2 * x + 1;
             if (out(x) != correct) {
@@ -361,8 +382,29 @@ int main(int argc, char **argv) {
          .distribute(x);
         g.distribute(x)
          .send_to(0);
-
         Buffer<int> out = g.realize({20});
+        if (rank == 0) {
+            if (out.dim(0).min() != 0) {
+                printf("rank %d: out.dim(0).min() = %d instead of %d\n", rank, out.dim(0).min(), 0);
+                return 0;
+            }
+            if (out.dim(0).max() != 19) {
+                printf("rank %d: out.dim(0).max() = %d instead of %d\n", rank, out.dim(0).max(), 19);
+                return 0;
+            }
+        } else {
+            int num_elements_per_proc = (20 + numprocs - 1) / numprocs;
+            int buf_min = num_elements_per_proc * rank;
+            int buf_max = std::min(buf_min + num_elements_per_proc - 1, 20 - 1);
+            if (out.dim(0).min() != buf_min) {
+                printf("rank %d: out.dim(0).min() = %d instead of %d\n", rank, out.dim(0).min(), buf_min);
+                return 0;
+            }
+            if (out.dim(0).max() != buf_max) {
+                printf("rank %d: out.dim(0).max() = %d instead of %d\n", rank, out.dim(0).max(), buf_max);
+                return 0;
+            }
+        }
         for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
             int correct = 4 * x + 3;
             if (out(x) != correct) {
