@@ -75,6 +75,7 @@ set(HEADER_FILES
     HexagonOptimize.h
     ImageParam.h
     InferArguments.h
+    InjectCommunications.h
     InjectHostDevBufferCopies.h
     Inline.h
     InlineReductions.h
@@ -235,6 +236,7 @@ set(SOURCE_FILES
     HexagonOptimize.cpp
     ImageParam.cpp
     InferArguments.cpp
+    InjectCommunications.cpp
     InjectHostDevBufferCopies.cpp
     Inline.cpp
     InlineReductions.cpp
