@@ -162,7 +162,7 @@ void lower_impl(const vector<Function> &output_funcs,
     if (t.has_feature(Target::MPI)) {
         debug(1) << "Splitting distributed loops...\n";
         std::tie(s, has_distributed_loops) = distribute_loops(s);
-        debug(2) << "Lowering after converting distributed for loops:\n" << s << "\n\n";
+        log("Lowering after converting distributed for loops:", s);
     }
 
     if (any_memoized) {
@@ -232,7 +232,7 @@ void lower_impl(const vector<Function> &output_funcs,
     if (t.has_feature(Target::MPI)) {
         debug(1) << "Injecting MPI communications...\n";
         s = inject_communications(s);
-        debug(2) << "Lowering after injecting communications:\n" << s << "\n\n";
+        log("Lowering after injecting communications", s);
     }
 
     debug(1) << "Removing code that depends on undef values...\n";

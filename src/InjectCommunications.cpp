@@ -1,6 +1,7 @@
 #include "InjectCommunications.h"
 #include "IRMutator.h"
 #include "IROperator.h"
+#include "Simplify.h"
 
 using std::string;
 using std::to_string;
@@ -53,12 +54,14 @@ protected:
                     ))
                 )
             );
-            Expr min_val = 1, extent_val = 1;
+            Expr min_val = 0, extent_val = 1;
             for (int i = 0; i < *dimensions; i++) {
-                min_val *= Variable::make(Int(32), producer_name->value + ".min." + to_string(i));
+                min_val += extent_val * Variable::make(Int(32), producer_name->value + ".min." + to_string(i));
                 extent_val *= Variable::make(Int(32), producer_name->value + ".extent." + to_string(i));
             }
-            Stmt source_case = 
+            min_val = simplify(min_val);
+            extent_val = simplify(extent_val);
+            Stmt source_case =
                 Allocate::make(min_var, Int(32),  MemoryType::Register, {}, const_true(),
                 Allocate::make(extent_var, Int(32),  MemoryType::Register, {}, const_true(),
                     Block::make({
