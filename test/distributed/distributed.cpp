@@ -543,6 +543,61 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (get_jit_target_from_environment().has_gpu_feature()) {
+        Func f("f");
+        f(x, y, z) = 2 * x + 3 * y + 5 * z + 1;
+        f.distribute(z)
+         .gpu_blocks(y)
+         .gpu_threads(x)
+         .send_to(0);
+        Buffer<int> out = f.realize({5, 7, 20});
+        out.copy_to_host();
+
+        int num_elements_per_proc = (20 + numprocs - 1) / numprocs;
+        int buf_min = num_elements_per_proc * rank;
+        int buf_max = std::min(buf_min + num_elements_per_proc - 1, 20 - 1);
+        if (rank == 0) {
+            buf_min = 0;
+            buf_max = 19;
+        }
+        if (out.dim(0).min() != 0) {
+            printf("rank %d: out.dim(0).min() = %d instead of %d\n", rank, out.dim(0).min(), 0);
+            return 0;
+        }
+        if (out.dim(0).max() != 4) {
+            printf("rank %d: out.dim(0).max() = %d instead of %d\n", rank, out.dim(0).max(), 4);
+            return 0;
+        }
+        if (out.dim(1).min() != 0) {
+            printf("rank %d: out.dim(1).min() = %d instead of %d\n", rank, out.dim(1).min(), 0);
+            return 0;
+        }
+        if (out.dim(1).max() != 6) {
+            printf("rank %d: out.dim(1).max() = %d instead of %d\n", rank, out.dim(1).max(), 6);
+            return 0;
+        }
+        if (out.dim(2).min() != buf_min) {
+            printf("rank %d: out.dim(2).min() = %d instead of %d\n", rank, out.dim(2).min(), buf_min);
+            return 0;
+        }
+        if (out.dim(2).max() != buf_max) {
+            printf("rank %d: out.dim(2).max() = %d instead of %d\n", rank, out.dim(2).max(), buf_max);
+            return 0;
+        }
+        for (int z = out.dim(2).min(); z <= out.dim(2).max(); z++) {
+            for (int y = out.dim(1).min(); y <= out.dim(1).max(); y++) {
+                for (int x = out.dim(0).min(); x <= out.dim(0).max(); x++) {
+                    int correct = 2 * x + 3 * y + 5 * z + 1;
+                    if (out(x, y, z) != correct) {
+                        printf("out(%d, %d, %d) = %d instead of %d\n", x, y, z, out(x, y, z), correct);
+                        MPI_Finalize();
+                        return -1;
+                    }
+                }
+            }
+        }
+    }
+
     MPI_Finalize();
     return 0;
 }

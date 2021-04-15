@@ -81,6 +81,21 @@ class FindBufferUsage : public IRVisitor {
                 devices_touched.insert(current_device_api);
                 devices_writing.insert(current_device_api);
             }
+        } else if (op->is_intrinsic(Call::mpi_send)) {
+            internal_assert(op->args.size() == 5);
+            const Variable *send_to_var = op->args[0].as<Variable>();
+            internal_assert(send_to_var != nullptr);
+            if (send_to_var->name == buffer) {
+                devices_touched.insert(DeviceAPI::Host);
+            }
+        } else if (op->is_intrinsic(Call::mpi_recv)) {
+            internal_assert(op->args.size() == 5);
+            const Variable *send_to_var = op->args[0].as<Variable>();
+            internal_assert(send_to_var != nullptr);
+            if (send_to_var->name == buffer) {
+                devices_touched.insert(DeviceAPI::Host);
+                devices_writing.insert(DeviceAPI::Host);
+            }
         } else if (op->is_extern() && op->func.defined()) {
             // This is a call to an extern stage
             Function f(op->func);
