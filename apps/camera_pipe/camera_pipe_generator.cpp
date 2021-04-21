@@ -439,6 +439,15 @@ void CameraPipe::generate() {
     whiteLevel.set_estimate(1023);
     processed.set_estimates({{0, 2592}, {0, 1968}, {0, 3}});
 
+    // input.trace_loads();
+    // shifted.trace_stores();
+    // denoised.trace_stores();
+    // deinterleaved.trace_stores();
+    // demosaiced->output.trace_stores();
+    // corrected.trace_stores();
+    // curved.trace_stores();
+    // processed.trace_stores();
+
     // Schedule
     if (auto_schedule) {
         // nothing

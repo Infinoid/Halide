@@ -5,7 +5,7 @@
  * Converting RAW data to RGB24 by demosiacking and gamma correcting. */
 #include "HalideBuffer.h"
 
-namespace FCam {
+namespace FCam_CPU {
 
 /** Demosaic, white balance, and gamma correct a raw frame, and
  * return a slightly smaller RGB24 format image. At least four
@@ -17,6 +17,17 @@ namespace FCam {
  * it uses the frame's platform's \ref Platform::rawToRGBColorMatrix
  * method to retrieve the correct white-balanced color conversion
  * matrix. */
+void demosaic(Halide::Runtime::Buffer<uint16_t> input,
+              Halide::Runtime::Buffer<uint8_t> out,
+              float colorTemp = 3700.0f,
+              float contrast = 50.0f,
+              bool denoise = true, int blackLevel = 25,
+              int whiteLevel = 1023,
+              float gamma = 2.2f);
+}
+
+namespace FCam_CUDA {
+/* Same thing as above, implemented in CUDA. */
 void demosaic(Halide::Runtime::Buffer<uint16_t> input,
               Halide::Runtime::Buffer<uint8_t> out,
               float colorTemp = 3700.0f,

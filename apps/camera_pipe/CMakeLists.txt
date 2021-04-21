@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(camera_pipe)
+project(camera_pipe LANGUAGES CXX CUDA)
 
 enable_testing()
 
@@ -25,7 +25,9 @@ target_link_libraries(camera_pipe.generator
 add_halide_library(camera_pipe FROM camera_pipe.generator FEATURES large_buffers)
 
 #FCAM
-add_library(fcam fcam/Demosaic.cpp)
+add_library(fcam fcam/Demosaic.cpp fcam/Demosaic.cu)
+set_target_properties(fcam PROPERTIES CUDA_SEPARABLE_COMPILATION ON
+                                      CUDA_ARCHITECTURES "75")
 target_link_libraries(fcam PRIVATE Halide::Halide OpenMP::OpenMP_CXX)
 
 #fast image dump/load library
@@ -37,6 +39,7 @@ target_link_libraries(dump PRIVATE dumpload Halide::ImageIO Halide::Halide)
 
 # Main executable
 add_executable(camera_pipe_process process.cpp distributed.cpp distributed.h)
+set_target_properties(camera_pipe_process PROPERTIES CUDA_ARCHITECTURES "75")
 target_link_libraries(camera_pipe_process
                       PRIVATE
                       fcam

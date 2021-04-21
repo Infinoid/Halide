@@ -16,6 +16,8 @@
 #include <cstdlib>
 #include <mpi.h>
 
+// #define GENERATE_OUTPUT_FILE
+
 using namespace Halide::Runtime;
 using namespace Halide::Tools;
 
@@ -32,23 +34,11 @@ int main(int argc, char **argv) {
 
     distributed_init(&argc, &argv);
 
-    bool runHalide, runC;
-    char *benchmark_type = getenv("BENCHMARK_TYPE");
-    if (benchmark_type == NULL) {
-      runHalide = true;
-      runC = true;
-    } else if (strncasecmp(benchmark_type,"both",5) == 0) {
-      runHalide = true;
-      runC = true;
-    } else if (strncasecmp(benchmark_type,"halide",7) == 0) {
-      runHalide = true;
-      runC = false;
-    } else if (strncasecmp(benchmark_type,"c",2) == 0) {
-      runHalide = false;
-      runC = true;
-    } else {
-      fprintf_rank0(stderr, "Invalide benchmark type of %s. Must be in {halide,c,both}\n", benchmark_type);
-      exit(0);
+    bool runHalide = getenv("RUN_HALIDE") != nullptr;
+    bool runC = getenv("RUN_C") != nullptr;
+    bool runCUDA = getenv("RUN_CUDA") != nullptr;
+    if(!runHalide && !runC && !runCUDA) {
+        runHalide = runC = runCUDA = true;
     }
 
     fprintf_rank0(stderr, "input: %s\n", argv[1]);
@@ -117,20 +107,33 @@ int main(int argc, char **argv) {
     double best;
 
     if (runHalide) {
-      best = benchmark(timing_iterations, 1, [&]() {
-          camera_pipe(input, matrix_3200, matrix_7000,
-                      color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
-                      output);
+        memset(output.begin(), 0, output.size_in_bytes());
+        best = benchmark(timing_iterations, 1, [&]() {
+            camera_pipe(input, matrix_3200, matrix_7000,
+                        color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
+                        output);
           output.device_sync();
-      });
-      report_distributed_time("Halide (manual) ISP", best, &halide_min, &halide_max);
-    } 
+        });
+        report_distributed_time("Halide (manual) ISP", best, &halide_min, &halide_max);
+        // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".halide.png");
+    }
 
     if (runC) {
-          best = benchmark(timing_iterations, 1, [&]() {
-          FCam::demosaic(input, output, color_temp, contrast, true, blackLevel, whiteLevel, gamma);
-      });
-      report_distributed_time("C++ ISP", best, &cpp_min, &cpp_max);
+        memset(output.begin(), 0, output.size_in_bytes());
+        best = benchmark(timing_iterations, 1, [&]() {
+            FCam_CPU::demosaic(input, output, color_temp, contrast, true, blackLevel, whiteLevel, gamma);
+        });
+        report_distributed_time("C++ ISP", best, &cpp_min, &cpp_max);
+        // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".cpp.png");
+    }
+
+    if (runCUDA) {
+        memset(output.begin(), 0, output.size_in_bytes());
+        best = benchmark(timing_iterations, 1, [&]() {
+        FCam_CUDA::demosaic(input, output, color_temp, contrast, true, blackLevel, whiteLevel, gamma);
+        });
+        report_distributed_time("CUDA ISP", best, &cpp_min, &cpp_max);
+        // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".cuda.png");
     }
 
     Buffer<uint8_t> *full_output;

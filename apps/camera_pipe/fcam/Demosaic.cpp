@@ -12,7 +12,7 @@
 // #include <FCam/Sensor.h>
 // #include <FCam/Time.h>
 
-namespace FCam {
+namespace FCam_CPU {
 
 // Make a linear luminance -> pixel value lookup table
 void makeLUT(float contrast, int blackLevel, int whiteLevel, float gamma, unsigned char *lut) {
