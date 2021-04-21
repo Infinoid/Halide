@@ -1,18 +1,20 @@
+#include "fcam/Demosaic.h"
+
 #include "halide_benchmark.h"
 
 #include "camera_pipe.h"
-#ifndef NO_AUTO_SCHEDULE
-#include "camera_pipe_auto_schedule.h"
-#endif
 
 #include "HalideBuffer.h"
 #include "halide_image_io.h"
 #include "halide_malloc_trace.h"
+#include "distributed.h"
+#include "dumpload.h"
 
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <mpi.h>
 
 using namespace Halide::Runtime;
 using namespace Halide::Tools;
@@ -28,10 +30,35 @@ int main(int argc, char **argv) {
     halide_enable_malloc_trace();
 #endif
 
-    fprintf(stderr, "input: %s\n", argv[1]);
-    Buffer<uint16_t> input = load_and_convert_image(argv[1]);
-    fprintf(stderr, "       %d %d\n", input.width(), input.height());
-    Buffer<uint8_t> output(((input.width() - 32) / 32) * 32, ((input.height() - 24) / 32) * 32, 3);
+    distributed_init(&argc, &argv);
+
+    bool runHalide, runC;
+    char *benchmark_type = getenv("BENCHMARK_TYPE");
+    if (benchmark_type == NULL) {
+      runHalide = true;
+      runC = true;
+    } else if (strncasecmp(benchmark_type,"both",5) == 0) {
+      runHalide = true;
+      runC = true;
+    } else if (strncasecmp(benchmark_type,"halide",7) == 0) {
+      runHalide = true;
+      runC = false;
+    } else if (strncasecmp(benchmark_type,"c",2) == 0) {
+      runHalide = false;
+      runC = true;
+    } else {
+      fprintf_rank0(stderr, "Invalide benchmark type of %s. Must be in {halide,c,both}\n", benchmark_type);
+      exit(0);
+    }
+
+    fprintf_rank0(stderr, "input: %s\n", argv[1]);
+    Buffer<uint16_t> input;
+    if(strstr(argv[1], ".raw") == argv[1]+strlen(argv[1])-4) {
+        input = load_raw_image(argv[1]);
+    } else {
+        input = load_and_convert_image(argv[1]);
+    }
+    fprintf_rank0(stderr, "       %d %d\n", input.width(), input.height());
 
 #ifdef HL_MEMINFO
     info(input, "input");
@@ -64,30 +91,68 @@ int main(int argc, char **argv) {
     int blackLevel = 25;
     int whiteLevel = 1023;
 
+    int full_image_width  = ((input.width () - 32) / 32) * 32;
+    int full_image_height = ((input.height() - 24) / 32) * 32;
+    int full_image_channels = 3;
+    Buffer<uint8_t> output(nullptr, {full_image_width, full_image_height, 3});
+    output.set_distributed({full_image_width, full_image_height, 3});
+    // Query local buffer size
+    camera_pipe(input, matrix_3200, matrix_7000,
+                color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
+                output);
+    output.allocate();
+    int local_xmin = output.dim(0).min();
+    int local_xmax = output.dim(0).min()+output.dim(0).extent();
+    int local_ymin = output.dim(1).min();
+    int local_ymax = output.dim(1).min()+output.dim(1).extent();
+    int local_cmin = output.dim(2).min();
+    int local_cmax = output.dim(2).min()+output.dim(2).extent();
+    float halide_min = -1, halide_max = -1, cpp_min = -1, cpp_max = -1, mpi_min = -1, mpi_max = -1;
+    if(numranks > 1) {
+        fprintf_rank0(stderr, "Running in distributed node with %d processes\n", numranks);
+        fprintf_rank(stderr, "local output shape is [%d,%d,%d]-[%d,%d,%d]\n",
+            local_xmin, local_ymin, local_cmin,
+            local_xmax, local_ymax, local_cmax);
+    }
     double best;
 
-    best = benchmark(timing_iterations, 1, [&]() {
-        camera_pipe(input, matrix_3200, matrix_7000,
-                    color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
-                    output);
-        output.device_sync();
+    if (runHalide) {
+      best = benchmark(timing_iterations, 1, [&]() {
+          camera_pipe(input, matrix_3200, matrix_7000,
+                      color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
+                      output);
+          output.device_sync();
+      });
+      report_distributed_time("Halide (manual) ISP", best, &halide_min, &halide_max);
+    } 
+
+    if (runC) {
+          best = benchmark(timing_iterations, 1, [&]() {
+          FCam::demosaic(input, output, color_temp, contrast, true, blackLevel, whiteLevel, gamma);
+      });
+      report_distributed_time("C++ ISP", best, &cpp_min, &cpp_max);
+    }
+
+    Buffer<uint8_t> *full_output;
+    MPI_Barrier(MPI_COMM_WORLD);
+    best = benchmark(1, 1, [&]() {
+        full_output = gather_to_rank0(output, full_image_width, full_image_height);
     });
-    fprintf(stderr, "Halide (manual):\t%gus\n", best * 1e6);
+    report_distributed_time("MPI gathering data to node 0", best, &mpi_min, &mpi_max);
 
-#ifndef NO_AUTO_SCHEDULE
-    best = benchmark(timing_iterations, 1, [&]() {
-        camera_pipe_auto_schedule(input, matrix_3200, matrix_7000,
-                                  color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
-                                  output);
-        output.device_sync();
-    });
-    fprintf(stderr, "Halide (auto):\t%gus\n", best * 1e6);
-#endif
+#ifdef GENERATE_OUTPUT_FILE
+    if(full_output != NULL) {
+        // node 0 writes output to file
+        fprintf(stderr, "output: %s\n", argv[7]);
+        convert_and_save_image(*full_output, argv[7]);
+        fprintf(stderr, "        %d %d\n", full_output->width(), full_output->height());
+    }
+#endif /* GENERATE_OUTPUT_FILE */
 
-    fprintf(stderr, "output: %s\n", argv[7]);
-    convert_and_save_image(output, argv[7]);
-    fprintf(stderr, "        %d %d\n", output.width(), output.height());
+    distributed_done();
 
-    printf("Success!\n");
+    fprintf_rank0(stderr, "all timings: halide: %f - %f  c++: %f - %f  mpi: %f - %f\n",
+        halide_min, halide_max, cpp_min, cpp_max, mpi_min, mpi_max);
+    if(!rank) printf("Success!\n");
     return 0;
 }

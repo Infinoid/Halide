@@ -8,8 +8,11 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 
-# Find Halide
+# Find Libraries
 find_package(Halide REQUIRED)
+find_package(MPI REQUIRED)
+find_package(OpenMP REQUIRED)
+
 
 # Generator
 add_executable(camera_pipe.generator camera_pipe_generator.cpp)
@@ -19,18 +22,27 @@ target_link_libraries(camera_pipe.generator
                       Halide::Tools)
 
 # Filters
-add_halide_library(camera_pipe FROM camera_pipe.generator)
-add_halide_library(camera_pipe_auto_schedule FROM camera_pipe.generator
-                   GENERATOR camera_pipe
-                   AUTOSCHEDULER Halide::Mullapudi2016)
+add_halide_library(camera_pipe FROM camera_pipe.generator FEATURES large_buffers)
+
+#FCAM
+add_library(fcam fcam/Demosaic.cpp)
+target_link_libraries(fcam PRIVATE Halide::Halide OpenMP::OpenMP_CXX)
+
+#fast image dump/load library
+add_library(dumpload dumpload.cpp)
+target_link_libraries(dumpload PRIVATE Halide::Halide)
+
+add_executable(dump dump.cpp)
+target_link_libraries(dump PRIVATE dumpload Halide::ImageIO Halide::Halide)
 
 # Main executable
-add_executable(camera_pipe_process process.cpp)
+add_executable(camera_pipe_process process.cpp distributed.cpp distributed.h)
 target_link_libraries(camera_pipe_process
                       PRIVATE
+                      fcam
                       Halide::ImageIO
-                      camera_pipe
-                      camera_pipe_auto_schedule)
+                      dumpload
+                      camera_pipe)
 
 # Test that the app actually works!
 set(IMAGE ${CMAKE_CURRENT_LIST_DIR}/../images/bayer_raw.png)
