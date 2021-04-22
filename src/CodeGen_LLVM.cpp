@@ -2682,16 +2682,6 @@ void CodeGen_LLVM::visit(const Call *op) {
         codegen(Call::make(op->type, "halide_mpi_send", op->args, Call::Extern));
     } else if (op->is_intrinsic(Call::mpi_recv)) {
         codegen(Call::make(op->type, "halide_mpi_recv", op->args, Call::Extern));
-    } else if (op->is_intrinsic(Call::mulhi_shr)) {
-        internal_assert(op->args.size() == 3);
-
-        Type ty = op->type;
-        Type wide_ty = ty.widen();
-
-        Expr p_wide = cast(wide_ty, op->args[0]) * cast(wide_ty, op->args[1]);
-        const UIntImm *shift = op->args[2].as<UIntImm>();
-        internal_assert(shift != nullptr) << "Third argument to mulhi_shr intrinsic must be an unsigned integer immediate.\n";
-        value = codegen(cast(ty, p_wide >> (shift->value + ty.bits())));
     } else if (op->is_intrinsic(Call::sorted_avg)) {
         internal_assert(op->args.size() == 2);
         // b > a, so the following works without widening:
