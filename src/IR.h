@@ -530,7 +530,7 @@ struct Call : public ExprNode<Call> {
         mpi_rank,
         mpi_send,
         mpi_recv,
-        mulhi_shr,  // Compute high_half(arg[0] * arg[1]) >> arg[3]. Note that this is a shift in addition to taking the upper half of multiply result. arg[3] must be an unsigned integer immediate.
+        mul_shift_right,
         mux,
         popcount,
         predicate,
@@ -545,6 +545,7 @@ struct Call : public ExprNode<Call> {
         rewrite_buffer,
         rounding_halving_add,
         rounding_halving_sub,
+        rounding_mul_shift_right,
         rounding_shift_left,
         rounding_shift_right,
         saturating_add,
