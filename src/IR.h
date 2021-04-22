@@ -552,6 +552,7 @@ struct Call : public ExprNode<Call> {
         scatter_gather,
         select_mask,
         send_to_marker, // For distributed schedules
+        send_to_profiling_marker, // For distributed schedules
         shift_left,
         shift_right,
         signed_integer_overflow,

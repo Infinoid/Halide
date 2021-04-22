@@ -12,7 +12,7 @@ namespace Internal {
 
 /** Find send_to nodes and replace them with actual MPI receive and send code.
  */
-Stmt inject_communications(Stmt s);
+Stmt inject_communications(Stmt s, bool inject_profiling);
 
 } // namespace Internal
 } // namespace Halide

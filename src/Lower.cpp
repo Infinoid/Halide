@@ -231,7 +231,7 @@ void lower_impl(const vector<Function> &output_funcs,
 
     if (t.has_feature(Target::MPI)) {
         debug(1) << "Injecting MPI communications...\n";
-        s = inject_communications(s);
+        s = inject_communications(s, t.has_feature(Target::Profile));
         log("Lowering after injecting communications", s);
     }
 

@@ -10,6 +10,8 @@ namespace Halide {
 namespace Internal {
 
 class InjectCommunications : public IRMutator {
+public:
+    InjectCommunications(bool inject_profiling) : inject_profiling(inject_profiling) {}
 protected:
     using IRMutator::visit;
 
@@ -77,15 +79,25 @@ protected:
                             destination_rank, Expr(2) /* tag */}, Call::Intrinsic))
                     })
                 ));
-            return IfThenElse::make(rank != destination_rank, source_case, destination_case);
+            Stmt ret = IfThenElse::make(rank != destination_rank, source_case, destination_case);
+            if (inject_profiling) {
+                ret = Block::make({Evaluate::make(
+                        Call::make(Type(), Call::send_to_profiling_marker, {marker->args[0], const_true() /*begin*/}, Call::Intrinsic)),
+                    ret,
+                    Evaluate::make(
+                        Call::make(Type(), Call::send_to_profiling_marker, {marker->args[0], const_false() /*end*/}, Call::Intrinsic))});
+            }
+            return ret;
         } else {
             return IRMutator::visit(op);
         }
     }
+private:
+    bool inject_profiling;
 };
 
-Stmt inject_communications(Stmt s) {
-    return InjectCommunications().mutate(s);
+Stmt inject_communications(Stmt s, bool inject_profiling) {
+    return InjectCommunications(inject_profiling).mutate(s);
 }
 
 } // namespace Internal

@@ -316,6 +316,24 @@ private:
         }
         return stmt;
     }
+
+    Expr visit(const Call *op) override {
+        if (Call::as_intrinsic(op, {Call::send_to_profiling_marker})) {
+            internal_assert(op != nullptr && op->args.size() == 2);
+            if (is_const_one(op->args[1])) {
+                const StringImm *producer_name = op->args[0].as<StringImm>();
+                string send_to_name = producer_name->value + "-send_to";
+                int idx = get_func_id(send_to_name);
+                return Call::make(Int(32), "halide_profiler_set_current_func",
+                                         {profiler_state, profiler_token, idx}, Call::Extern);
+            } else {
+                return Call::make(Int(32), "halide_profiler_set_current_func",
+                                         {profiler_state, profiler_token, stack.back()}, Call::Extern);
+            }
+        } else {
+            return IRMutator::visit(op);
+        }
+    }
 };
 
 }  // namespace

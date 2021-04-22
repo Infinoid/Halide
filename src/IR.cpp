@@ -641,6 +641,7 @@ const char *const intrinsic_op_names[] = {
     "scatter_gather",
     "select_mask",
     "send_to_marker",
+    "send_to_profiling_marker",
     "shift_left",
     "shift_right",
     "signed_integer_overflow",
