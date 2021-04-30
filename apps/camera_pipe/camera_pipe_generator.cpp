@@ -422,7 +422,7 @@ void CameraPipe::generate() {
 
     Func curved = apply_curve(corrected);
 
-    processed(x, y, c) = select(sharpen_strength != 0.0f, sharpen(curved)(x, y, c), curved(x, y, c));
+    processed(x, y, c) = curved(x, y, c);
     //processed(x, y, c) = sharpen(curved)(x, y, c);
 
     /* ESTIMATES */
@@ -461,7 +461,8 @@ void CameraPipe::generate() {
             Expr out_height = processed.height();
             processed.bound(c, 0, 3)
                 .bound(x, 0, (out_width / 2) * 2)
-                .bound(y, 0, (out_height / 2) * 2);
+                // .bound(y, 0, (out_height / 2) * 2) // causes failures with .distribute(y) below
+                ;
         }
 
         Var xi{"xi"}, yi{"yi"}, xii{"xii"}, xio{"xio"};

@@ -2,7 +2,8 @@
 
 #include "halide_benchmark.h"
 
-#include "camera_pipe.h"
+#include "camera_pipe_cpu.h"
+#include "camera_pipe_gpu.h"
 
 #include "HalideBuffer.h"
 #include "halide_image_io.h"
@@ -34,11 +35,12 @@ int main(int argc, char **argv) {
 
     distributed_init(&argc, &argv);
 
-    bool runHalide = getenv("RUN_HALIDE") != nullptr;
+    bool runHalideCPU = getenv("RUN_HALIDE_CPU") != nullptr;
+    bool runHalideGPU = getenv("RUN_HALIDE_GPU") != nullptr;
     bool runC = getenv("RUN_C") != nullptr;
     bool runCUDA = getenv("RUN_CUDA") != nullptr;
-    if(!runHalide && !runC && !runCUDA) {
-        runHalide = runC = runCUDA = true;
+    if(!runHalideCPU && !runHalideGPU && !runC && !runCUDA) {
+        runHalideCPU = runHalideGPU = runC = runCUDA = true;
     }
 
     fprintf_rank0(stderr, "input: %s\n", argv[1]);
@@ -87,7 +89,7 @@ int main(int argc, char **argv) {
     Buffer<uint8_t> output(nullptr, {full_image_width, full_image_height, 3});
     output.set_distributed({full_image_width, full_image_height, 3});
     // Query local buffer size
-    camera_pipe(input, matrix_3200, matrix_7000,
+    camera_pipe_gpu(input, matrix_3200, matrix_7000,
                 color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
                 output);
     output.allocate();
@@ -97,7 +99,7 @@ int main(int argc, char **argv) {
     int local_ymax = output.dim(1).min()+output.dim(1).extent();
     int local_cmin = output.dim(2).min();
     int local_cmax = output.dim(2).min()+output.dim(2).extent();
-    float halide_min = -1, halide_max = -1, cpp_min = -1, cpp_max = -1, mpi_min = -1, mpi_max = -1;
+    float halide_cpu_min = -1, halide_cpu_max = -1, halide_gpu_min = -1, halide_gpu_max = -1, cuda_min = -1, cuda_max = -1, cpp_min = -1, cpp_max = -1, mpi_min = -1, mpi_max = -1;
     if(numranks > 1) {
         fprintf_rank0(stderr, "Running in distributed node with %d processes\n", numranks);
         fprintf_rank(stderr, "local output shape is [%d,%d,%d]-[%d,%d,%d]\n",
@@ -106,16 +108,37 @@ int main(int argc, char **argv) {
     }
     double best;
 
-    if (runHalide) {
+    if (runHalideCPU) {
         memset(output.begin(), 0, output.size_in_bytes());
         best = benchmark(timing_iterations, 1, [&]() {
-            camera_pipe(input, matrix_3200, matrix_7000,
+            camera_pipe_cpu(input, matrix_3200, matrix_7000,
                         color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
                         output);
           output.device_sync();
         });
-        report_distributed_time("Halide (manual) ISP", best, &halide_min, &halide_max);
+        report_distributed_time("Halide (CPU) ISP", best, &halide_cpu_min, &halide_cpu_max);
         // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".halide.png");
+    }
+
+    if (runHalideGPU) {
+        memset(output.begin(), 0, output.size_in_bytes());
+        best = benchmark(timing_iterations, 1, [&]() {
+            camera_pipe_gpu(input, matrix_3200, matrix_7000,
+                        color_temp, gamma, contrast, sharpen, blackLevel, whiteLevel,
+                        output);
+          output.copy_to_host();
+        });
+        report_distributed_time("Halide (GPU) ISP", best, &halide_gpu_min, &halide_gpu_max);
+        // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".halide.png");
+    }
+
+    if (runCUDA) {
+        memset(output.begin(), 0, output.size_in_bytes());
+        best = benchmark(timing_iterations, 1, [&]() {
+        FCam_CUDA::demosaic(input, output, color_temp, contrast, true, blackLevel, whiteLevel, gamma);
+        });
+        report_distributed_time("CUDA ISP", best, &cuda_min, &cuda_max);
+        // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".cuda.png");
     }
 
     if (runC) {
@@ -125,15 +148,6 @@ int main(int argc, char **argv) {
         });
         report_distributed_time("C++ ISP", best, &cpp_min, &cpp_max);
         // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".cpp.png");
-    }
-
-    if (runCUDA) {
-        memset(output.begin(), 0, output.size_in_bytes());
-        best = benchmark(timing_iterations, 1, [&]() {
-        FCam_CUDA::demosaic(input, output, color_temp, contrast, true, blackLevel, whiteLevel, gamma);
-        });
-        report_distributed_time("CUDA ISP", best, &cpp_min, &cpp_max);
-        // convert_and_save_image(output, std::string(argv[7])+"."+std::to_string(rank)+".cuda.png");
     }
 
     Buffer<uint8_t> *full_output;
@@ -154,8 +168,8 @@ int main(int argc, char **argv) {
 
     distributed_done();
 
-    fprintf_rank0(stderr, "all timings: halide: %f - %f  c++: %f - %f  mpi: %f - %f\n",
-        halide_min, halide_max, cpp_min, cpp_max, mpi_min, mpi_max);
+    fprintf_rank0(stderr, "all timings: halide_cpu: %f - %f  halide_gpu: %f - %f  cuda: %f - %f  c++: %f - %f  mpi: %f - %f\n",
+        halide_cpu_min, halide_cpu_max, halide_gpu_min, halide_gpu_max, cuda_min, cuda_max, cpp_min, cpp_max, mpi_min, mpi_max);
     if(!rank) printf("Success!\n");
     return 0;
 }

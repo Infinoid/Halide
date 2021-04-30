@@ -22,7 +22,8 @@ target_link_libraries(camera_pipe.generator
                       Halide::Tools)
 
 # Filters
-add_halide_library(camera_pipe FROM camera_pipe.generator FEATURES large_buffers)
+add_halide_library(camera_pipe_cpu FROM camera_pipe.generator GENERATOR camera_pipe FEATURES large_buffers)
+add_halide_library(camera_pipe_gpu FROM camera_pipe.generator GENERATOR camera_pipe FEATURES cuda large_buffers)
 
 #FCAM
 add_library(fcam fcam/Demosaic.cpp fcam/Demosaic.cu)
@@ -45,7 +46,8 @@ target_link_libraries(camera_pipe_process
                       fcam
                       Halide::ImageIO
                       dumpload
-                      camera_pipe)
+                      camera_pipe_cpu
+                      camera_pipe_gpu)
 
 # Test that the app actually works!
 set(IMAGE ${CMAKE_CURRENT_LIST_DIR}/../images/bayer_raw.png)

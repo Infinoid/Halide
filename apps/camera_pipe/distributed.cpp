@@ -148,7 +148,7 @@ void report_distributed_time(const std::string task, float best, float *outmin, 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Reduce(&best, &min, 1, MPI_FLOAT, MPI_MIN, 0, MPI_COMM_WORLD);
     MPI_Reduce(&best, &max, 1, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
-    fprintf_rank0(stderr, "distributed %s took %f-%f seconds across %d nodes.\n",
+    fprintf_rank0(stderr, "distributed %s took %f-%f seconds across %d processes.\n",
         task.c_str(), min, max, numranks);
     if(outmin)
         *outmin = min;
